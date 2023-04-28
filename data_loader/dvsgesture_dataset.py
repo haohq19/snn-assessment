@@ -1,0 +1,212 @@
+import struct
+import numpy as np
+import h5py
+import glob
+import os
+import bisect
+
+import torch.utils.data
+
+
+class DvsGestureDataset(torch.utils.data.Dataset):
+    def __init__(
+            self,
+            n_step=10,
+            n_class=11,
+            group_name='train',
+            size=None,
+            ds=4,
+            dt=1000):
+        super(DvsGestureDataset, self).__init__()
+        if size is None:
+            size = [2, 32, 32]
+        self.filename = './dataset/dvs_gestures_events_' + group_name + '_{}.hdf5'.format(n_class)
+        self.n_step = n_step
+        self.n_class = n_class
+        self.group_name = group_name
+        self.size = size
+        self.ds = ds
+        self.dt = dt
+        if not os.path.isfile(self.filename):
+            create_events_hdf5(self.filename, self.n_class, self.group_name)
+        self.f = h5py.File(self.filename, 'r', swmr=True, libver="latest")
+        self.n_subgroup = len(self.f)
+        self.n_sample_ls = []
+        self.n_sample = 0
+        for sub_grp in range(self.n_subgroup):
+            sub_grp_len = len(self.f[str(sub_grp)]['labels'][()])
+            self.n_sample_ls.append(sub_grp_len)
+            self.n_sample += sub_grp_len
+        self.map = np.zeros(self.n_sample, dtype=int)
+        self.n_sample_cnt = np.zeros(self.n_subgroup, dtype=int)
+        idx_beg = 0
+        for sub_grp in range(self.n_subgroup):
+            sub_grp_len = self.n_sample_ls[sub_grp]
+            idx_end = idx_beg + sub_grp_len
+            self.map[idx_beg:idx_end] = sub_grp
+            idx_beg += sub_grp_len
+        for sub_grp in range(self.n_subgroup - 1):
+            sub_grp_len = self.n_sample_ls[sub_grp]
+            self.n_sample_cnt[sub_grp + 1] = self.n_sample_cnt[sub_grp] + sub_grp_len
+        # print(self.map)
+        # print(self.n_sample_cnt)
+
+    def __getitem__(self, index):
+        sub_grp_index = self.map[index]
+        item_index = index - self.n_sample_cnt[sub_grp_index]
+        sub_grp = self.f[str(sub_grp_index)]
+        labels = sub_grp['labels'][()]
+        label = labels[item_index, :]
+        tbegin = label[1]
+        tend = label[2] - 2 * self.n_step * self.dt
+        start_time = tbegin
+        if tbegin < tend:
+            start_time = np.random.randint(tbegin, tend)
+        label = label[0] - 1
+        times = sub_grp['time']
+        datas = sub_grp['data']
+        idx_beg = find_first(times, start_time)
+        idx_end = find_first(times[idx_beg:], start_time + self.n_step * self.dt) + idx_beg
+        if idx_end <= idx_beg:
+            return self.__getitem__(index+1)
+        data = chunk_evs_pol(times[idx_beg:idx_end], datas[idx_beg:idx_end], dt=self.dt, n_step=self.n_step,
+                             size=self.size, ds=self.ds)
+        return torch.from_numpy(data).float(), torch.from_numpy(one_hot(label, 11)).float()
+
+    def __len__(self):
+        return self.n_sample
+
+
+def gather_aedat(file_path, start_id, end_id, filename_prefix='user'):
+    if not os.path.isdir(file_path):
+        raise FileNotFoundError("dvs-gesture dataset not found, looked at: {}".format(file_path))
+    fns = []
+    for i in range(start_id, end_id):
+        search_mask = file_path + '/' + filename_prefix + "{0:02d}".format(i) + '*.aedat'
+        files = glob.glob(search_mask)
+        if len(files) > 0:
+            fns += files
+    return fns
+
+
+def aedat_to_events(filename, label_range):
+    label_filename = filename[:-6] + '_labels.csv'
+    labels = np.loadtxt(label_filename, skiprows=1, delimiter=',',
+                        dtype='uint32')  # ((label, start_time, end_time), ... ) 12 labels
+    events = []
+    with open(filename, 'rb') as f:
+        for i in range(5):
+            f.readline()
+        while True:
+            data_ev_head = f.read(28)
+            if len(data_ev_head) == 0:
+                break
+
+            eventtype = struct.unpack('H', data_ev_head[0:2])[0]
+            # eventsource = struct.unpack('H', data_ev_head[2:4])[0]
+            eventsize = struct.unpack('I', data_ev_head[4:8])[0]
+            # eventoffset = struct.unpack('I', data_ev_head[8:12])[0]
+            # eventtsoverflow = struct.unpack('I', data_ev_head[12:16])[0]
+            # eventcapacity = struct.unpack('I', data_ev_head[16:20])[0]
+            eventnumber = struct.unpack('I', data_ev_head[20:24])[0]
+            # eventvalid = struct.unpack('I', data_ev_head[24:28])[0]
+
+            if (eventtype == 1):
+                event_bytes = np.frombuffer(f.read(eventnumber * eventsize), 'uint32')
+                event_bytes = event_bytes.reshape(-1, 2)
+
+                x = (event_bytes[:, 0] >> 17) & 0x00001FFF
+                y = (event_bytes[:, 0] >> 2) & 0x00001FFF
+                p = (event_bytes[:, 0] >> 1) & 0x00000001
+                t = event_bytes[:, 1]
+                events.append([t, x, y, p])
+
+            else:
+                f.read(eventnumber * eventsize)
+    events = np.column_stack(events)
+    events = events.astype('uint32')
+    selected_events = np.zeros([4, 0], 'uint32')
+    selected_labels = np.zeros([0, 3], 'uint32')
+    for label in labels:
+        if label[0] - 1 in range(label_range):
+            start = np.searchsorted(events[0, :], label[1])
+            end = np.searchsorted(events[0, :], label[2])
+            selected_events = np.column_stack([selected_events, events[:, start:end]])
+            selected_labels = np.row_stack([selected_labels, label])
+    return selected_events.T, selected_labels
+
+
+def compute_start_time(labels, pad):
+    l0 = np.arange(len(labels[:, 0]), dtype='int')
+    np.random.shuffle(l0)
+    label = labels[l0[0], 0]
+    tbegin = labels[l0[0], 1]
+    tend = labels[l0[0], 2] - pad
+    try:
+        start_time = np.random.randint(tbegin, tend)
+        return start_time, label
+    except BaseException:
+        return tbegin, label
+
+
+def create_events_hdf5(hdf5_filename, n_class, group_name):
+    fns = []
+    if group_name == 'train':
+        fns = gather_aedat(os.path.join('./dataset/DvsGesture'), 1, 24)
+        print("generate dvs-gesture train dataset")
+    elif group_name == 'test':
+        fns = gather_aedat(os.path.join('./dataset/DvsGesture'), 24, 30)
+        print("generate dvs-gesture test dataset")
+    with h5py.File(hdf5_filename, 'w') as f:
+        f.clear()
+        key = 0
+        for file_name in fns:
+            events, labels = aedat_to_events(file_name, n_class)
+            if len(events) > 0:
+                subgroup = f.create_group(str(key))
+                dataset_t = subgroup.create_dataset('time', events[:, 0].shape, dtype=np.uint32)
+                dataset_d = subgroup.create_dataset('data', events[:, 1:].shape, dtype=np.uint8)
+                dataset_l = subgroup.create_dataset('labels', labels.shape, dtype=np.uint32)
+                dataset_t[...] = events[:, 0]
+                dataset_d[...] = events[:, 1:]
+                dataset_l[...] = labels
+                key += 1
+
+
+def one_hot(mbt, num_classes):
+    out = np.zeros(num_classes)
+    out[mbt] = 1
+    return out
+
+
+def find_first(a, tgt):
+    return bisect.bisect_left(a, tgt)
+
+
+def chunk_evs_pol(times, datas, dt=1000, n_step=60, size=[2, 32, 32], ds=4):
+    t_start = times[0]
+    ts = range(t_start, t_start + n_step * dt, dt)
+    chunks = np.zeros(size + [len(ts)], dtype='int8')
+    idx_start = 0
+    idx_end = 0
+    for i, t in enumerate(ts):
+        idx_end += find_first(times[idx_end:], t + dt)
+        if idx_end > idx_start:
+            ee = datas[idx_start:idx_end]
+            pol, x, y = ee[:, 2], ee[:, 0] // ds, ee[:, 1] // ds
+            np.add.at(chunks, (pol, x, y, i), 1)
+        idx_start = idx_end
+    return chunks
+
+
+if __name__ == "__main__":
+    dvs_gesture_dataset = DvsGestureDataset(group_name='train', n_class=12)
+    for i in range(dvs_gesture_dataset.__len__()):
+        if i > 1170:
+            print(str(i))
+        data, label = dvs_gesture_dataset.__getitem__(i)
+    dataloader = torch.utils.data.DataLoader(dvs_gesture_dataset, batch_size=256)
+    for i, (inputs, labels) in enumerate(dataloader):
+        print(str(i))
+        # print(labels)
+
