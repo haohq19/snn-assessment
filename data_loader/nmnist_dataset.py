@@ -9,7 +9,11 @@ import numpy as np
 class NMnistDataset(data.Dataset):
     def __init__(self, group_name, n_class=10, n_step=10):
         super(NMnistDataset, self).__init__()
-        self.n_class = n_class
+        self.n_class_total = 10
+        if n_class == 0:
+            self.n_class = self.n_class_total
+        else:
+            self.n_class = n_class
         if group_name == 'test':
             start_time = time.time()
             dataset = sio.loadmat(r'./dataset/NMnist/NMNIST_test_data.mat')

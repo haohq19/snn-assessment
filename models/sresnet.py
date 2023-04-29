@@ -11,11 +11,9 @@ class SResnet18(nn.Module):
         # conv0
         self.conv0 = nn.Conv2d(in_channels=2, out_channels=64, kernel_size=3, stride=1, padding=1)
         # block0
-        # self.block0 = SResBlock(_in_channels=64, _out_channels=64, _kernel_size=3, _padding=1, device=device)
         self.b0_conv0 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
         self.b0_conv1 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
         # block1
-        # self.block1 = SResBlock(_in_channels=64, _out_channels=64, _kernel_size=3, _padding=1, device=device)
         self.b1_conv0 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
         self.b1_conv1 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
         # conv1
@@ -23,7 +21,6 @@ class SResnet18(nn.Module):
         # conv2
         self.conv2 = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1)
         # block2
-        # self.block2 = SResBlock(_in_channels=128, _out_channels=128, _kernel_size=3, _padding=1, device=device)
         self.b2_conv0 = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1)
         self.b2_conv1 = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1)
         # conv3
@@ -31,7 +28,6 @@ class SResnet18(nn.Module):
         # conv4
         self.conv4 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1)
         # block3
-        # self.block3 = SResBlock(_in_channels=256, _out_channels=256, _kernel_size=3, _padding=1, device=device)
         self.b3_conv0 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1)
         self.b3_conv1 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1)
         # conv5
@@ -39,7 +35,6 @@ class SResnet18(nn.Module):
         # conv6
         self.conv6 = nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=1, padding=1)
         # block4
-        # self.block4 = SResBlock(_in_channels=512, _out_channels=512, _kernel_size=3, _padding=1, device=device)
         self.b4_conv0 = nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=1, padding=1)
         self.b4_conv1 = nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=1, padding=1)
 

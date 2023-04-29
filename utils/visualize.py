@@ -10,7 +10,7 @@ import scipy
 from models.scnn import *
 from data_loader.nmnist_dataset import *
 from data_loader.dvsgesture_dataset import *
-from logME_test import *
+from logme_evalute import *
 
 # 训练过程可视化
 def visualize_loss(

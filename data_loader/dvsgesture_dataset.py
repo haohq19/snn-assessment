@@ -17,12 +17,25 @@ class DvsGestureDataset(torch.utils.data.Dataset):
             size=None,
             ds=4,
             dt=1000):
+        """
+        Args:
+            n_step: time step of the spike neural network
+            n_class: classes of the labels the generated dataset to contain
+            group_name: train or test
+            size: size of the input image, usually 2*32*32
+            ds: spatial resolution
+            dt: temporal resolution, in us
+        """
         super(DvsGestureDataset, self).__init__()
         if size is None:
             size = [2, 32, 32]
         self.filename = './dataset/dvs_gestures_events_' + group_name + '_{}.hdf5'.format(n_class)
         self.n_step = n_step
-        self.n_class = n_class
+        self.n_class_total = 11
+        if n_class == 0:
+            self.n_class = self.n_class_total
+        else:
+            self.n_class = n_class
         self.group_name = group_name
         self.size = size
         self.ds = ds

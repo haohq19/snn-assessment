@@ -22,7 +22,11 @@ class CaltechDataset(torch.utils.data.Dataset):
             size = [2, 32, 32]
         self.filename = './dataset/caltech_events_' + group_name + '_{}.hdf5'.format(n_class)
         self.n_step = n_step
-        self.n_class = n_class
+        self.n_class_total = 100
+        if n_class == 0:
+            self.n_class = self.n_class_total
+        else:
+            self.n_class = n_class
         self.group_name = group_name
         self.size = size
         self.ds = ds
@@ -32,6 +36,7 @@ class CaltechDataset(torch.utils.data.Dataset):
             print('create dataset' + self.filename)
         self.f = h5py.File(self.filename, 'r', swmr=True, libver="latest")
         self.n_sample = len(self.f)
+
 
     def __getitem__(self, index):
         sub_group = self.f[str(index)]
