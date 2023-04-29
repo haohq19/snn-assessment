@@ -1,16 +1,6 @@
-import os
-import time
-import torch
-import glob
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-import numpy as np
-import imageio
-import scipy
-from models.scnn import *
 from data_loader.nmnist_dataset import *
 from data_loader.dvsgesture_dataset import *
-from logme_evalute import *
+from files.logme_evalute import *
 
 # 训练过程可视化
 def visualize_loss(

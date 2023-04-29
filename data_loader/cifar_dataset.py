@@ -19,7 +19,6 @@ class CifarDataset(torch.utils.data.Dataset):
         super(CifarDataset, self).__init__()
         if size is None:
             size = [2, 32, 32]
-        self.filename = './dataset/cifar_events_' + group_name + '_{}.hdf5'.format(n_class)
         self.n_step = n_step
         self.n_class_total = 10
         if n_class == 0:
@@ -27,6 +26,7 @@ class CifarDataset(torch.utils.data.Dataset):
         else:
             self.n_class = n_class
         self.group_name = group_name
+        self.filename = './dataset/cifar_events_' + self.group_name + '_{}.hdf5'.format(self.n_class)
         self.size = size
         self.ds = ds
         self.dt = dt

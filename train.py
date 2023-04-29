@@ -18,15 +18,21 @@ os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 def train(model,  # 模型
           criterion,  # 损失函数
           scheduler,  # 优化器
-          train_loader, test_loader,
-          train_loss_record, test_loss_record,
-          train_acc_record, acc_record,
-          epoch, n_epoch
+          train_loader,
+          test_loader,
+          train_loss_record,
+          test_loss_record,
+          train_acc_record,
+          acc_record,
+          epoch,
+          n_epoch,
+          weight_name,
+          device
           ):
     """
 
     Args:
-        model:
+        model: model
         criterion:
         scheduler:
         train_loader:
@@ -37,12 +43,15 @@ def train(model,  # 模型
         acc_record:
         epoch:
         n_epoch:
+        weight_name:
+        device:
 
     Returns:
 
     """
     model.to(device)
     start_time = time.time()
+    weight_save_path = './models_save/' + weight_name + '/'
     while epoch < n_epoch:
         model.train()
         epoch_loss = 0
@@ -133,7 +142,6 @@ if __name__ == '__main__':
     ds = 4  # spatial resolution
     n_epoch = 400
     learning_rate = (10 ** (-args.lr))
-    weight_save_path = './models_save/' + weight_name + '/'
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     num_workers = 16
 
@@ -177,7 +185,9 @@ if __name__ == '__main__':
               train_acc_record=train_acc_record,
               acc_record=acc_record,
               epoch=epoch,
-              n_epoch=n_epoch
+              n_epoch=n_epoch,
+              weight_name=weight_name,
+              device=device
               )
 
 
@@ -213,7 +223,6 @@ if __name__ == '__main__':
             param.requires_grad = False
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
         scheduler = Scheduler(optimizer, learning_rate)
-        weight_name += '_ft'
         train(
             model=model,
             criterion=nn.MSELoss(),
@@ -225,4 +234,7 @@ if __name__ == '__main__':
             train_acc_record=train_acc_record,
             acc_record=acc_record,
             epoch=0,
-            n_epoch=200)
+            n_epoch=200,
+            weight_name=weight_name + '_ft',
+            device=device
+        )

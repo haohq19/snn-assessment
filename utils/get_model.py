@@ -5,47 +5,54 @@ from data_loader.cifar_dataset import *
 from models.scnn import *
 from models.sresnet import *
 
+
+
 class Model(nn.Module):
 
-    def __init__(self, device, n_class, m_name):
+    def __init__(self, device, n_class, model_name, use_backbone_only=False):
         super(Model, self).__init__()
         self.device = device
-        if m_name == 'sres4':
+        self.use_backbone_only = use_backbone_only
+        if model_name == 'sres4':
             self.backbone = SResnet4(device=self.device)
             self.classifier = nn.Linear(256 * 1 * 1, n_class)
-        elif m_name == 'sres5':
+        elif model_name == 'sres5':
             self.backbone = SResnet5(device=self.device)
             self.classifier = nn.Linear(256 * 4 * 4, n_class)
-        elif m_name == 'sres6':
+        elif model_name == 'sres6':
             self.backbone = SResnet6(device=self.device)
             self.classifier = nn.Linear(128 * 1 * 1, n_class)
-        elif m_name == 'sres7':
+        elif model_name == 'sres7':
             self.backbone = SResnet7(device=self.device)
             self.classifier = nn.Linear(64 * 1 * 1, n_class)
-        elif m_name == 'sres18':
+        elif model_name == 'sres18':
             self.backbone = SResnet18(device=self.device)
             self.classifier = nn.Linear(512 * 4 * 4, n_class)
-        elif m_name == 'scnn4':
+        elif model_name == 'scnn4':
             self.backbone = SCNN4(device=self.device)
             self.classifier = nn.Linear(128 * 1 * 1, n_class)
-        elif m_name == 'scnn3':
+        elif model_name == 'scnn3':
             self.backbone = SCNN3(device=self.device)
             self.classifier = nn.Linear(256 * 1 * 1, n_class)
-        elif m_name == 'scnn2':
+        elif model_name == 'scnn2':
             self.backbone = SCNN2(device=self.device)
             self.classifier = nn.Linear(256 * 8 * 8, n_class)
-        elif m_name == 'scnn1':
+        elif model_name == 'scnn1':
             self.backbone = SCNN1(device=self.device)
             self.classifier = nn.Linear(64 * 1 * 1, n_class)
-        elif m_name == 'scnn0':
+        elif model_name == 'scnn0':
             self.backbone = SCNN0(device=self.device)
             self.classifier = nn.Linear(64 * 16 * 16, n_class)
         self.n_class = n_class
         self.spike_func = SpikeFunc.apply
 
 
+
     def forward(self, input):
         input = self.backbone(input)
+        if self.use_backbone_only is True:
+            return input
+
         shape = input.shape
         n_step = input.shape[2]
         h0_mem = h0_spike = h0_sumspike = torch.zeros(shape[0], self.n_class, device=self.device)
@@ -69,7 +76,8 @@ def get_model(
         model_name,  # 模型名称
         weight_name,  # 权重名称
         load_param=False,  # load pre-trained weights or not
-        load_backbone_only=False  # 加载模式
+        load_backbone_only=False,  # 加载模式
+        use_backbone_only=False
 ):
     """
 
@@ -80,18 +88,23 @@ def get_model(
         weight_name: name of pre-trained weights
         load_param: load weights or not
         load_backbone_only: load backbone only or not
+        use_backbone_only: do not contain classifier
 
     Returns: model, train_loss_record, test_loss_record, train_acc_record, acc_record, epoch
 
     """
-    model = Model(device=device, n_class=n_class_target, m_name=model_name)
+    model = Model(device=device,
+                  n_class=n_class_target,
+                  model_name=model_name,
+                  use_backbone_only=use_backbone_only
+                  )
     train_loss_record = []  # 040202 after only
     test_loss_record = []  # 040202 after only
     train_acc_record = []  # 040202 after only
     acc_record = []  # test_acc_record
     epoch = 0  # current epoch
 
-    weight_save_path = './models_save/' + model_name + '/'
+    weight_save_path = './models_save/' + weight_name + '/'
 
     if load_param is True:
         pt_weights = glob.glob(os.path.join(weight_save_path, '*.pth'))

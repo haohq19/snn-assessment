@@ -3,14 +3,14 @@ import glob
 import torch
 import argparse
 
-parser = argparse.ArgumentParser(description='number of model')
-parser.add_argument('-n', help='Number of model', default=0, type=str)
+parser = argparse.ArgumentParser(description='model information')
+parser.add_argument('--num', help='Number of model', default=0, type=str)
 args = parser.parse_args()
 
 folder_path = './models_save'
 file_list = os.listdir(folder_path)
 file_list.sort()
-date = args.n
+date = args.num
 i = 0
 for file_name in file_list:
     if os.path.isdir(os.path.join(folder_path, file_name)):

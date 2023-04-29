@@ -19,7 +19,7 @@ class NMnistDataset(data.Dataset):
             dataset = sio.loadmat(r'./dataset/NMnist/NMNIST_test_data.mat')
             self.images = dataset['image']
             self.labels = dataset['label']
-            mask = np.argmax(self.labels, axis=1) < n_class
+            mask = np.argmax(self.labels, axis=1) < self.n_class
             self.labels = self.labels[mask]
             self.images = self.images[mask]
             self.images = self.images.transpose(0, 3, 1, 2, 4)
@@ -33,7 +33,7 @@ class NMnistDataset(data.Dataset):
             self.labels = dataset['label'][()]
             self.labels = self.labels.transpose(1, 0)
             self.images = self.images.transpose(4, 1, 3, 2, 0)
-            mask = np.argmax(self.labels, axis=1) < n_class
+            mask = np.argmax(self.labels, axis=1) < self.n_class
             self.labels = self.labels[mask]
             self.images = self.images[mask]
             self.images = self.images[..., 1:-1, 1:-1, :n_step]
