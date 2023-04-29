@@ -143,7 +143,7 @@ if __name__ == '__main__':
     n_epoch = 400
     learning_rate = (10 ** (-args.lr))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    num_workers = 0
+    num_workers = 16
 
     # print(device)
     if args.ft == 0:

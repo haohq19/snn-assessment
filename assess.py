@@ -13,22 +13,14 @@ args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
 
-
-
-
-
-
-
-
 def assess(model, test_loader):
     model.to(device)
     model.eval()
     features = []
     labels = []
     for _, (input, label) in enumerate(test_loader):
-        batch_size = input.shape[0]
-        n_step = input.shape[4]
-
+        # batch_size = input.shape[0]
+        # n_step = input.shape[4]
         # weight
         # weight = np.zeros([batch_size, 1, n_step], dtype=float)
         # norm
@@ -38,13 +30,10 @@ def assess(model, test_loader):
         #     weight[..., i] = (1 - 0.2 ** (n_step - i)) / (1 - 0.2)
         # for i in range(batch_size):
         #     norm[i] = np.linalg.norm(image[i])
-        # label
         label = np.argmax(label.numpy(), axis=1)
-        # feature
         feature = model(input.to(device)).detach().cpu().numpy()
         # for i in range(len(feature)):
         #     sample = feature[i]
-        #
         #     fig = plt.figure(dpi=300)
         #     ax = fig.add_subplot(111)
         #     im = ax.imshow(sample, cmap='jet', aspect='auto')
@@ -52,14 +41,14 @@ def assess(model, test_loader):
         #     ax.set_aspect(1)
         #     plt.show()
         # softmax
-        exp_f = np.exp(feature)
-        softmax_f = exp_f / np.sum(np.sum(exp_f, axis=1, keepdims=True), axis=2, keepdims=True)
-        feature = softmax_f.sum(axis=2)
+        # exp_f = np.exp(feature)
+        # softmax_f = exp_f / np.sum(np.sum(exp_f, axis=1, keepdims=True), axis=2, keepdims=True)
+        # feature = softmax_f.sum(axis=2)
         # for i in range(batch_size):
         #     fnorm[i] = np.linalg.norm(feature[i])
         # feature = feature / fnorm
         # feature = feature / norm
-        # feature = feature.sum(axis=2) / n_step
+        feature = feature.sum(axis=2)
         features.append(feature)
         labels.append(label)
 
