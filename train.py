@@ -4,10 +4,10 @@ from utils.get_model import *
 from utils.optimizer import *
 
 parser = argparse.ArgumentParser(description='train model')
-parser.add_argument('--gpu', help='Number of GPU to use', default=0, type=int)
+parser.add_argument('--gpu', help='Number of GPU to use', default=1, type=int)
 parser.add_argument('--dt', help='Duration of one time slice (ms)', default=10, type=int)
 parser.add_argument('--lr', help='Learning rate', default=4, type=int)
-parser.add_argument('--cls', help='Number of classes', default=0, type=int)
+parser.add_argument('--cls', help='Number of classes', default=7, type=int)
 parser.add_argument('--ld', help='Mode, 0: init params, 1: load params', default=1, type=int)
 parser.add_argument('--ft', help='Train, 0: train, 1: fine-tune', default=1, type=int)
 args = parser.parse_args()
@@ -121,7 +121,7 @@ def train(model,  # 模型
 
 
 if __name__ == '__main__':
-    number = '042602'
+    number = '042601'
     dataset_name = 'dg'
 
     # dg: dvs-gesture
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     # ct: n-caltech101
     # cf: cifar10-dvs
 
-    model_name = 'sres4'
+    model_name = 'scnn3'
 
     # sres: 4, 5, 6, 7, 18
     # scnn: 0, 1, 2, 3, 4
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     n_epoch = 400
     learning_rate = (10 ** (-args.lr))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    num_workers = 16
+    num_workers = 0
 
     # print(device)
     if args.ft == 0:
@@ -191,7 +191,7 @@ if __name__ == '__main__':
               )
 
 
-    elif args.f == 1:
+    elif args.ft == 1:
         print('train: fine-tune models')
         ft_dataset_name = 'dg'
         train_loader, n_class_total = get_data(
@@ -213,12 +213,12 @@ if __name__ == '__main__':
             batch_size=batch_size,
             num_workers=num_workers)
 
-        model, train_loss_record, test_loss_record, train_acc_record, acc_record, _= get_model(device,
-                                                                                               n_class_total,
-                                                                                               model_name,
-                                                                                               weight_name,
-                                                                                               load_param=args.ld,
-                                                                                               load_backbone_only=True)
+        model, train_loss_record, test_loss_record, train_acc_record, acc_record, _ = get_model(device,
+                                                                                                n_class_total,
+                                                                                                model_name,
+                                                                                                weight_name,
+                                                                                                load_param=args.ld,
+                                                                                                load_backbone_only=True)
         for param in model.backbone.parameters():
             param.requires_grad = False
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)

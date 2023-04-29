@@ -4,7 +4,6 @@ import re
 import numpy as np
 from utils.get_data import *
 from utils.get_model import *
-from utils.optimizer import *
 from LogME.LogME import *
 
 parser = argparse.ArgumentParser(description='snn assessment')

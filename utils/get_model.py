@@ -106,7 +106,7 @@ def get_model(
 
     weight_save_path = './models_save/' + weight_name + '/'
 
-    if load_param is True:
+    if load_param == 1:
         pt_weights = glob.glob(os.path.join(weight_save_path, '*.pth'))
         ft_weights = glob.glob(os.path.join(weight_save_path, '*ft*.pth'))
         pt_weights = list(set(pt_weights).difference(set(ft_weights)))
