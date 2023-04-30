@@ -78,10 +78,10 @@ def kendall_relative_coefficient(x, y=None):
 
 if __name__ == '__main__':
     print('assess: assess models')
-    number = '042602'
-    model_name = 'sres4'
+    number = '042511'
+    model_name = 'sres7'
     train_ds_name = 'dg'
-    test_ds_name = 'dg'
+    test_ds_name = 'cf'
 
     n_step = 100
     batch_size = 8

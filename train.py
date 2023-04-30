@@ -56,7 +56,7 @@ def train(model,  # 模型
     start_time = time.time()
     weight_save_path = './models_save/' + weight_name + '/'
     if ft_dataset_name != '':
-        weight_name += '_{}'.format(ft_dataset_name)
+        weight_name += '_ft_{}'.format(ft_dataset_name)
 
     while epoch < n_epoch:
         model.train()
@@ -127,7 +127,7 @@ def train(model,  # 模型
 
 
 if __name__ == '__main__':
-    number = '042510'
+    number = '042511'
     dataset_name = 'dg'
 
     # dg: dvs-gesture
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     # ct: n-caltech101
     # cf: cifar10-dvs
 
-    model_name = 'scnn1'
+    model_name = 'sres7'
 
     # sres: 4, 5, 6, 7, 18
     # scnn: 0, 1, 2, 3, 4

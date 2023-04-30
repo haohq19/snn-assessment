@@ -109,6 +109,8 @@ class Model(nn.Module):
 
     def forward(self, input):
         input = self.backbone(input)
+        if self.use_backbone_only == 1:
+            return input
         output = self.classifier(input)
         return output
 
