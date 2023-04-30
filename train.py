@@ -2,14 +2,15 @@ import argparse
 from utils.get_data import *
 from utils.get_model import *
 from utils.optimizer import *
+from models.criterion import *
 
 parser = argparse.ArgumentParser(description='train model')
 parser.add_argument('--gpu', help='Number of GPU to use', default=7, type=int)
 parser.add_argument('--dt', help='Duration of one time slice (ms)', default=10, type=int)
 parser.add_argument('--lr', help='Learning rate', default=4, type=int)
 parser.add_argument('--cls', help='Number of classes', default=11, type=int)
-parser.add_argument('--ld', help='Mode, 0: init params, 1: load params', default=0, type=int)
-parser.add_argument('--ft', help='Train, 0: train, 1: fine-tune', default=0, type=int)
+parser.add_argument('--ld', help='Mode, 0: init params, 1: load params', default=1, type=int)
+parser.add_argument('--ft', help='Train, 0: train, 1: fine-tune', default=1, type=int)
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
@@ -27,7 +28,8 @@ def train(model,  # 模型
           epoch,
           n_epoch,
           weight_name,
-          device
+          device,
+          ft_dataset_name=''
           ):
     """
 
@@ -45,6 +47,7 @@ def train(model,  # 模型
         n_epoch:
         weight_name:
         device:
+        ft_dataset_name:
 
     Returns:
 
@@ -52,6 +55,9 @@ def train(model,  # 模型
     model.to(device)
     start_time = time.time()
     weight_save_path = './models_save/' + weight_name + '/'
+    if ft_dataset_name != '':
+        weight_name += '_{}'.format(ft_dataset_name)
+
     while epoch < n_epoch:
         model.train()
         epoch_loss = 0
@@ -121,7 +127,7 @@ def train(model,  # 模型
 
 
 if __name__ == '__main__':
-    number = '043001'
+    number = '042510'
     dataset_name = 'dg'
 
     # dg: dvs-gesture
@@ -129,7 +135,7 @@ if __name__ == '__main__':
     # ct: n-caltech101
     # cf: cifar10-dvs
 
-    model_name = 'scnn4'
+    model_name = 'scnn1'
 
     # sres: 4, 5, 6, 7, 18
     # scnn: 0, 1, 2, 3, 4
@@ -138,7 +144,7 @@ if __name__ == '__main__':
     dt = args.dt * 1000  # temporal resolution, in us
 
     weight_name = '{}_{}_{}_{}c'.format(number, dataset_name, model_name, args.cls)
-    classifier_name = 'tc'
+    classifier_name = 'rc'
     batch_size = 40
     ds = 4  # spatial resolution
     n_epoch = 400
@@ -179,7 +185,7 @@ if __name__ == '__main__':
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         scheduler = Scheduler(optimizer, learning_rate)
         train(model=model,
-              criterion=nn.CrossEntropyLoss(),
+              criterion=nn.MSELoss(),
               scheduler=scheduler,
               train_loader=train_loader,
               test_loader=test_loader,
@@ -196,7 +202,7 @@ if __name__ == '__main__':
 
     elif args.ft == 1:
         print('train: fine-tune models')
-        ft_dataset_name = 'dg'
+        ft_dataset_name = 'cf'
         train_loader, n_class_total = get_data(
             dataset_name=ft_dataset_name,
             group_name='train',
@@ -240,6 +246,7 @@ if __name__ == '__main__':
             acc_record=acc_record,
             epoch=0,
             n_epoch=200,
-            weight_name=weight_name + '_ft',
-            device=device
+            weight_name=weight_name,
+            device=device,
+            ft_dataset_name=ft_dataset_name
         )
