@@ -4,12 +4,12 @@ from utils.get_model import *
 from utils.optimizer import *
 
 parser = argparse.ArgumentParser(description='train model')
-parser.add_argument('--gpu', help='Number of GPU to use', default=1, type=int)
+parser.add_argument('--gpu', help='Number of GPU to use', default=7, type=int)
 parser.add_argument('--dt', help='Duration of one time slice (ms)', default=10, type=int)
 parser.add_argument('--lr', help='Learning rate', default=4, type=int)
-parser.add_argument('--cls', help='Number of classes', default=7, type=int)
-parser.add_argument('--ld', help='Mode, 0: init params, 1: load params', default=1, type=int)
-parser.add_argument('--ft', help='Train, 0: train, 1: fine-tune', default=1, type=int)
+parser.add_argument('--cls', help='Number of classes', default=11, type=int)
+parser.add_argument('--ld', help='Mode, 0: init params, 1: load params', default=0, type=int)
+parser.add_argument('--ft', help='Train, 0: train, 1: fine-tune', default=0, type=int)
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
@@ -121,7 +121,7 @@ def train(model,  # 模型
 
 
 if __name__ == '__main__':
-    number = '042601'
+    number = '043001'
     dataset_name = 'dg'
 
     # dg: dvs-gesture
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     # ct: n-caltech101
     # cf: cifar10-dvs
 
-    model_name = 'scnn3'
+    model_name = 'scnn4'
 
     # sres: 4, 5, 6, 7, 18
     # scnn: 0, 1, 2, 3, 4
@@ -138,6 +138,7 @@ if __name__ == '__main__':
     dt = args.dt * 1000  # temporal resolution, in us
 
     weight_name = '{}_{}_{}_{}c'.format(number, dataset_name, model_name, args.cls)
+    classifier_name = 'tc'
     batch_size = 40
     ds = 4  # spatial resolution
     n_epoch = 400
@@ -170,13 +171,15 @@ if __name__ == '__main__':
                                                                                                    n_class_target=n_class_total,
                                                                                                    model_name=model_name,
                                                                                                    weight_name=weight_name,
-                                                                                                   load_param=args.ld)
+                                                                                                   load_param=args.ld,
+                                                                                                   classifier_name=classifier_name
+                                                                                                   )
 
 
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         scheduler = Scheduler(optimizer, learning_rate)
         train(model=model,
-              criterion=nn.MSELoss(),
+              criterion=nn.CrossEntropyLoss(),
               scheduler=scheduler,
               train_loader=train_loader,
               test_loader=test_loader,
@@ -218,7 +221,9 @@ if __name__ == '__main__':
                                                                                                 model_name,
                                                                                                 weight_name,
                                                                                                 load_param=args.ld,
-                                                                                                load_backbone_only=True)
+                                                                                                load_backbone_only=True,
+                                                                                                classifier_name=classifier_name
+                                                                                                )
         for param in model.backbone.parameters():
             param.requires_grad = False
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
