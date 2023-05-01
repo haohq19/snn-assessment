@@ -127,8 +127,8 @@ def train(model,  # 模型
 
 
 if __name__ == '__main__':
-    number = '042511'
-    dataset_name = 'dg'
+    number = '050102'
+    dataset_name = 'cf'
 
     # dg: dvs-gesture
     # nm: n-mnist
