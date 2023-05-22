@@ -5,12 +5,13 @@ from utils.optimizer import *
 from models.criterion import *
 
 parser = argparse.ArgumentParser(description='train model')
-parser.add_argument('--gpu', help='Number of GPU to use', default=7, type=int)
+parser.add_argument('--gpu', help='Number of GPU to use', default=0, type=int)
 parser.add_argument('--dt', help='Duration of one time slice (ms)', default=10, type=int)
 parser.add_argument('--lr', help='Learning rate', default=4, type=int)
 parser.add_argument('--cls', help='Number of classes', default=11, type=int)
-parser.add_argument('--ld', help='Mode, 0: init params, 1: load params', default=1, type=int)
-parser.add_argument('--ft', help='Train, 0: train, 1: fine-tune', default=1, type=int)
+parser.add_argument('--ld', help='Mode, 0: init params, 1: load params', default=0, type=int)
+parser.add_argument('--ft', help='Train, 0: train, 1: fine-tune', default=0, type=int)
+parser.add_argument('--num', help='Number', default=11, type=int)
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
@@ -125,10 +126,22 @@ def train(model,  # 模型
             torch.save(state, weight_save_path + weight_name + '_{}.pth'.format(epoch))
 
 
+threshs = [0.1, 0.5]
+lenses = [0.3, 0.7]
+decays = [0.3, 0.7]
+
+i = args.num - 1
+
+thresh = threshs[int(i/4) % 2]
+lens = lenses[int(i/2) % 2]
+decay = decays[int(i/1) % 2]
 
 if __name__ == '__main__':
-    number = '050102'
-    dataset_name = 'cf'
+    n = args.num
+    date = '0509'
+    number = date + ('%.2d' % n)
+    print(number)
+    dataset_name = 'dg'
 
     # dg: dvs-gesture
     # nm: n-mnist
@@ -173,13 +186,13 @@ if __name__ == '__main__':
                                   batch_size=batch_size,
                                   num_workers=num_workers)
 
-        model, train_loss_record, test_loss_record, train_acc_record, acc_record, epoch= get_model(device=device,
-                                                                                                   n_class_target=n_class_total,
-                                                                                                   model_name=model_name,
-                                                                                                   weight_name=weight_name,
-                                                                                                   load_param=args.ld,
-                                                                                                   classifier_name=classifier_name
-                                                                                                   )
+        model, train_loss_record, test_loss_record, train_acc_record, acc_record, epoch = get_model(device=device,
+                                                                                                    n_class_target=n_class_total,
+                                                                                                    model_name=model_name,
+                                                                                                    weight_name=weight_name,
+                                                                                                    load_param=args.ld,
+                                                                                                    classifier_name=classifier_name
+                                                                                                    )
 
 
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -202,7 +215,7 @@ if __name__ == '__main__':
 
     elif args.ft == 1:
         print('train: fine-tune models')
-        ft_dataset_name = 'cf'
+        ft_dataset_name = 'dg'
         train_loader, n_class_total = get_data(
             dataset_name=ft_dataset_name,
             group_name='train',

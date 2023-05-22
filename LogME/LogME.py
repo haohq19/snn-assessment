@@ -26,12 +26,14 @@ def each_evidence(y_, f, fh, v, s, vh, N, D):
             break
         alpha = new_alpha
         beta = new_beta
+
     evidence = D / 2.0 * np.log(alpha) \
                + N / 2.0 * np.log(beta) \
                - 0.5 * np.sum(np.log(alpha + beta * s)) \
                - beta / 2.0 * beta_de \
                - alpha / 2.0 * alpha_de \
                - N / 2.0 * np.log(2 * np.pi)
+
     return evidence / N
 
 
@@ -93,7 +95,10 @@ class LogME(object):
         sigma = (s ** 2)
 
         self.num_dim = y.shape[1] if self.regression else int(y.max() + 1)
-        counts = []
+        self.counts = []
+        self.alphas = []
+        self.betas = []
+        self.ts = []
         evidences = []
         for i in range(self.num_dim):
             y_ = y[:, i] if self.regression else (y == i).astype(np.float64)
@@ -104,7 +109,7 @@ class LogME(object):
 
             alpha, beta = 1.0, 1.0
             count = 0
-            while True:  # for _ in range(11):
+            for _ in range(1000):  # for _ in range(11):
                 count += 1
                 gamma = (sigma / (sigma + alpha / beta)).sum()
                 m2 = (sigma * z2 / ((alpha / beta + sigma) ** 2)).sum()
@@ -117,17 +122,26 @@ class LogME(object):
                 beta = new_beta
             sigma_full = np.zeros((D, 1))
             sigma_full[:k] = sigma
-            self.sigma_fp = sigma_full
             evidence = D / 2.0 * np.log(alpha) \
                        + N / 2.0 * np.log(beta) \
                        - 0.5 * np.sum(np.log(alpha + beta * sigma_full)) \
                        - beta / 2.0 * res2 \
                        - alpha / 2.0 * m2 \
                        - N / 2.0 * np.log(2 * np.pi)
+            self.alphas.append(alpha)
+            self.betas.append(beta)
+            self.ts.append(alpha/beta)
 
-            counts.append(count)
+            self.sigma = sigma
+            self.lamb = sigma[0] / sigma[-1]
+            self.vareigen = np.std(sigma) ** 2
+            self.counts.append(count)
             evidences.append(evidence / N)
-        # print(np.mean(counts))
+        t = 1 / N * sigma[0]
+        self.ts_avg = np.mean(self.ts)
+        prop = t / self.ts_avg
+        print(prop)
+
         return np.mean(evidences)
 
     def fit(self, f: np.ndarray, y: np.ndarray):

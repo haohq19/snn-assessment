@@ -1,9 +1,6 @@
 import torch
+from train import *
 
-
-thresh = 0.3
-lens = 0.5
-decay = 0.5
 
 class SpikeFunc(torch.autograd.Function):
 

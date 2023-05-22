@@ -1,3 +1,4 @@
+import re
 from data_loader.dvsgesture_dataset import *
 from data_loader.nmnist_dataset import *
 from data_loader.caltech_dataset import *
@@ -5,6 +6,8 @@ from data_loader.cifar_dataset import *
 from models.scnn import *
 from models.sresnet import *
 from models.classifier import *
+from models.spike_func import *
+
 
 class ModelTC(nn.Module):
 
@@ -101,6 +104,7 @@ class Model(nn.Module):
         elif model_name == 'scnn1':
             self.backbone = SCNN1(device=self.device)
             self.classifier = get_classifier(classifier_name, 64 * 1 * 1, n_class, self.device)
+            # self.classifier = nn.Linear(64 * 1 * 1, n_class, self.device)
         elif model_name == 'scnn0':
             self.backbone = SCNN0(device=self.device)
             self.classifier = get_classifier(classifier_name, 64 * 16 * 16, n_class, self.device)
@@ -111,13 +115,30 @@ class Model(nn.Module):
         input = self.backbone(input)
         if self.use_backbone_only == 1:
             return input
-        output = self.classifier(input)
-        return output
+
+        # shape = input.shape
+        # n_step = input.shape[2]
+        # output = torch.zeros(shape[0], self.n_class, n_step, device=self.device)
+        #
+        # for step in range(n_step):
+        #     output[..., step] = self.classifier(input[..., step])
+        # return output
+
+        return self.classifier(input)
 
     def mem_update(self, _func, _x, _mem, _spike):
         _mem = _mem * decay * (1 - _spike) + _func(_x)
         _spike = self.spike_func(_mem)
         return _mem, _spike
+
+
+def sort_key(file_name):
+    n = re.findall(r'_(\d+)\.', file_name)  # 使用正则表达式提取文件名中的n
+    if n:
+        return int(n[0])
+    else:
+        return 0
+
 
 def get_model(
         device,  # 加载到设备
@@ -163,7 +184,9 @@ def get_model(
         ft_weights = glob.glob(os.path.join(weight_save_path, '*ft*.pth'))
         pt_weights = list(set(pt_weights).difference(set(ft_weights)))
         if len(pt_weights) > 0:
-            latest_pt_weight = max(pt_weights, key=os.path.getctime)
+            # latest_pt_weight = max(pt_weights, key=os.path.getctime)
+            pt_weights = sorted(pt_weights, key=sort_key, reverse=True)
+            latest_pt_weight = pt_weights[0]
             print('utils.get_model.get_model: load weights from ' + latest_pt_weight)
             state = torch.load(latest_pt_weight)
             if load_backbone_only is True:

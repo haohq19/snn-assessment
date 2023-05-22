@@ -13,3 +13,11 @@ class TETLoss(nn.Module):
         for step in n_step:
             loss += nn.CrossEntropyLoss(pred[..., step], gt)
         return 1/n_step * loss
+
+class MemLoss(nn.Module):
+    def __init__(self):
+        super(MemLoss, self).__init__()
+        self.criterion = nn.MSELoss()
+    def forward(self, pred, gt):
+        gt = gt - 0.2
+        return self.criterion(pred, gt)

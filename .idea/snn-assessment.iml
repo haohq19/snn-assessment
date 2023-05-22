@@ -6,11 +6,7 @@
       <excludeFolder url="file://$MODULE_DIR$/files" />
       <excludeFolder url="file://$MODULE_DIR$/models_save" />
     </content>
-    <orderEntry type="jdk" jdkName="py310 (3)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="py310" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-  </component>
-  <component name="PyDocumentationSettings">
-    <option name="format" value="GOOGLE" />
-    <option name="myDocStringFormat" value="Google" />
   </component>
 </module>

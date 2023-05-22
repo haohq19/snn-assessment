@@ -43,7 +43,7 @@ class TemporalCodingClassifier(nn.Module):
         shape = input.shape
         n_step = input.shape[2]
         h0_mem = h0_spike = torch.zeros(shape[0], self.n_class, device=self.device)
-        output = torch.zeros(shape[0], self.n_class, n_step,device=self.device)
+        output = torch.zeros(shape[0], self.n_class, n_step, device=self.device)
 
         for step in range(n_step):
             x = input[..., step]
@@ -59,10 +59,10 @@ class TemporalCodingClassifier(nn.Module):
         return _mem, _spike
 
 
-class TETClassifier(nn.Module):
+class LinearClassifier(nn.Module):
 
     def __init__(self, n_dim, n_class, device):
-        super(TETClassifier, self).__init__()
+        super(LinearClassifier, self).__init__()
         self.n_class = n_class
         self.device = device
         self.classifier = nn.Linear(n_dim, n_class)
@@ -70,12 +70,12 @@ class TETClassifier(nn.Module):
     def forward(self, input):
         shape = input.shape
         n_step = input.shape[2]
-        output = torch.zeros(shape[0], self.n_class, n_step,device=self.device)
+        output = torch.zeros(shape[0], self.n_class, device=self.device)
 
         for step in range(n_step):
-            output[..., step] = self.classifier(input[..., step])
+            output += self.classifier(input[..., step])
 
-        return output
+        return output/n_step
 
 
 def get_classifier(classifier_name, n_dim, n_class, device):
@@ -84,5 +84,5 @@ def get_classifier(classifier_name, n_dim, n_class, device):
         return RateCodingClassifier(n_dim, n_class, device)
     elif classifier_name == 'tc':
         return TemporalCodingClassifier(n_dim, n_class, device)
-    elif classifier_name == 'tet':
-        return TETClassifier(n_dim, n_class, device)
+    elif classifier_name == 'lc':
+        return LinearClassifier(n_dim, n_class, device)
