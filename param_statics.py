@@ -1,6 +1,6 @@
 import argparse
-from data_loader.dvsgesture_dataset import *
-from data_loader.caltech_dataset import *
+from spike_data.dvsgesture_dataset import *
+from spike_data.caltech_dataset import *
 from models.scnn import *
 from models.sresnet import *
 import matplotlib.pyplot as plt

@@ -1,75 +1,14 @@
 import re
-from data_loader.dvsgesture_dataset import *
-from data_loader.nmnist_dataset import *
-from data_loader.caltech_dataset import *
-from data_loader.cifar_dataset import *
+from spike_data.dvsgesture_dataset import *
+from spike_data.nmnist_dataset import *
+from spike_data.caltech_dataset import *
+from spike_data.cifar_dataset import *
 from models.scnn import *
 from models.sresnet import *
 from models.classifier import *
 from models.spike_func import *
 
 
-class ModelTC(nn.Module):
-
-    def __init__(self, device, n_class, model_name, use_backbone_only=False):
-        super(ModelTC, self).__init__()
-        self.device = device
-        self.use_backbone_only = use_backbone_only
-        if model_name == 'sres4':
-            self.backbone = SResnet4(device=self.device)
-            self.classifier = nn.Linear(256 * 1 * 1, n_class)
-        elif model_name == 'sres5':
-            self.backbone = SResnet5(device=self.device)
-            self.classifier = nn.Linear(256 * 4 * 4, n_class)
-        elif model_name == 'sres6':
-            self.backbone = SResnet6(device=self.device)
-            self.classifier = nn.Linear(128 * 1 * 1, n_class)
-        elif model_name == 'sres7':
-            self.backbone = SResnet7(device=self.device)
-            self.classifier = nn.Linear(64 * 1 * 1, n_class)
-        elif model_name == 'sres18':
-            self.backbone = SResnet18(device=self.device)
-            self.classifier = nn.Linear(512 * 4 * 4, n_class)
-        elif model_name == 'scnn4':
-            self.backbone = SCNN4(device=self.device)
-            self.classifier = nn.Linear(128 * 1 * 1, n_class)
-        elif model_name == 'scnn3':
-            self.backbone = SCNN3(device=self.device)
-            self.classifier = nn.Linear(256 * 1 * 1, n_class)
-        elif model_name == 'scnn2':
-            self.backbone = SCNN2(device=self.device)
-            self.classifier = nn.Linear(256 * 8 * 8, n_class)
-        elif model_name == 'scnn1':
-            self.backbone = SCNN1(device=self.device)
-            self.classifier = nn.Linear(64 * 1 * 1, n_class)
-        elif model_name == 'scnn0':
-            self.backbone = SCNN0(device=self.device)
-            self.classifier = nn.Linear(64 * 16 * 16, n_class)
-        self.n_class = n_class
-        self.spike_func = SpikeFunc.apply
-
-
-
-    def forward(self, input):
-        input = self.backbone(input)
-        if self.use_backbone_only is True:
-            return input
-
-        shape = input.shape
-        n_step = input.shape[2]
-        h0_mem = h0_spike = torch.zeros(shape[0], self.n_class, device=self.device)
-
-        for step in range(n_step):
-            x = input[..., step]
-            h0_mem, h0_spike = self.mem_update(self.classifier, x, h0_mem, h0_spike)
-            if torch.sum(h0_spike) > 0:
-                return h0_spike
-        return h0_spike
-
-    def mem_update(self, _func, _x, _mem, _spike):
-        _mem = _mem * decay * (1 - _spike) + _func(_x)
-        _spike = self.spike_func(_mem)
-        return _mem, _spike
 
 class Model(nn.Module):
 

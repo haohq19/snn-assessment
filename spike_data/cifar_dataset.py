@@ -1,17 +1,13 @@
-import struct
-import numpy as np
-import h5py
 import glob
 import os
-import bisect
-import time
 import torch.utils.data
+from spike_data.utils import *
 
 class CifarDataset(torch.utils.data.Dataset):
     def __init__(
             self,
             n_step=10,
-            n_class=100,
+            n_class=0,
             group_name='train',
             size=None,
             ds=4,
@@ -26,10 +22,10 @@ class CifarDataset(torch.utils.data.Dataset):
         else:
             self.n_class = n_class
         self.group_name = group_name
-        self.filename = './dataset/cifar_events_' + self.group_name + '_{}.hdf5'.format(self.n_class)
         self.size = size
         self.ds = ds
         self.dt = dt
+        self.filename = 'spike_data/dataset/cifar_events_' + self.group_name + '_{}.hdf5'.format(self.n_class)
         if not os.path.isfile(self.filename):
             create_events_hdf5(self.filename, self.n_class, self.group_name)
             print('create dataset' + self.filename)
@@ -40,25 +36,31 @@ class CifarDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         sub_group = self.f[str(index)]
         label = sub_group['labels'][()]
-        time = sub_group['time']
-        data = sub_group['data']
-        tbegin = time[()][0]
-        tend = time[()][-1] - self.n_step * self.dt
-        start_time = tbegin
-        if tbegin < tend:
-            start_time = np.random.randint(tbegin, tend)
-        idx_beg = find_first(time, start_time)
-        idx_end = find_first(time[idx_beg:], start_time + self.n_step * self.dt) + idx_beg
-        data = chunk_evs_pol(time[idx_beg:idx_end], data[idx_beg:idx_end], dt=self.dt, n_step=self.n_step,
-                             size=self.size, ds=self.ds)
-        return torch.from_numpy(data).float(), torch.from_numpy(one_hot(label[0], 10)).float()
+        times = sub_group['time']
+        events = sub_group['data']
+        t_begin = times[()][0]
+        t_end = times[()][-1] - self.n_step * self.dt
+        start_time = t_begin
+        if (self.group_name == 'train') and (t_begin < t_end):  # for test set, start time is fixed
+            start_time = np.random.randint(t_begin, t_end)
+        i_begin = bisect.bisect_left(times, start_time)
+        i_end = bisect.bisect_left(times[i_begin:], start_time + self.n_step * self.dt) + i_begin
+        frames = events_to_frames(
+            times[i_begin: i_end],
+            events[i_begin: i_end],
+            dt=self.dt,
+            ds=self.ds,
+            n_step=self.n_step,
+            size=self.size
+            )
+        return torch.from_numpy(frames).float(), torch.from_numpy(one_hot(label[0], self.n_class_total)).float()
 
     def __len__(self):
         return self.n_sample
 
 
 def aedat_to_events(folder_name, group_name):
-    aedat_list = glob.glob('./dataset/CIFAR10/' + folder_name + '/*.aedat')
+    aedat_list = glob.glob('spike_data/dataset/CIFAR10/' + folder_name + '/*.aedat')
     aedat_list = sorted(aedat_list)
     events = []
     n_event = len(aedat_list)
@@ -92,9 +94,8 @@ def aedat_to_events(folder_name, group_name):
     return events
 
 
-
 def create_events_hdf5(hdf5_filename, n_class, group_name):
-    folder_path = './dataset/CIFAR10'
+    folder_path = 'spike_data/dataset/CIFAR10'
     folder_list = os.listdir(folder_path)
     folder_list = sorted(folder_list)
     n_grp = 0
@@ -119,35 +120,6 @@ def create_events_hdf5(hdf5_filename, n_class, group_name):
                     n_grp += 1
                 key += 1
     print('generate CIFAR10 ' + group_name + ' dataset, used %.3fs' % (time.time() - start_time))
-
-
-
-def one_hot(mbt, num_classes):
-    out = np.zeros(num_classes)
-    out[mbt] = 1
-    return out
-
-
-def find_first(a, tgt):
-    return bisect.bisect_left(a, tgt)
-
-
-def chunk_evs_pol(times, datas, dt=1000, n_step=60, size=None, ds=4):
-    if size is None:
-        size = [2, 32, 32]
-    t_start = times[0]
-    ts = range(t_start, t_start + n_step * dt, dt)
-    chunks = np.zeros(size + [len(ts)], dtype='int8')
-    idx_start = 0
-    idx_end = 0
-    for i, t in enumerate(ts):
-        idx_end += find_first(times[idx_end:], t + dt)
-        if idx_end > idx_start:
-            ee = datas[idx_start:idx_end]
-            pol, x, y = ee[:, 2], ee[:, 0] // ds, ee[:, 1] // ds
-            np.add.at(chunks, (pol, x, y, i), 1)
-        idx_start = idx_end
-    return chunks
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ import h5py
 import glob
 import os
 import bisect
-
+from spike_data.utils import *
 import torch.utils.data
 
 
@@ -12,7 +12,7 @@ class DvsGestureDataset(torch.utils.data.Dataset):
     def __init__(
             self,
             n_step=10,
-            n_class=11,
+            n_class=0,
             group_name='train',
             size=None,
             ds=4,
@@ -20,7 +20,7 @@ class DvsGestureDataset(torch.utils.data.Dataset):
         """
         Args:
             n_step: time step of the spike neural network
-            n_class: classes of the labels the generated dataset to contain
+            n_class: classes of the labels the generated dataset to contain, 0 means all
             group_name: train or test
             size: size of the input image, usually 2*32*32
             ds: spatial resolution
@@ -30,18 +30,20 @@ class DvsGestureDataset(torch.utils.data.Dataset):
         if size is None:
             size = [2, 32, 32]
         self.n_step = n_step
-        self.n_class_total = 11
+        self.n_class_total = 11  # there are 11 classes in DvsGestureDataset
         if n_class == 0:
             self.n_class = self.n_class_total
         else:
             self.n_class = n_class
         self.group_name = group_name
-        self.filename = './dataset/dvs_gestures_events_' + self.group_name + '_{}.hdf5'.format(self.n_class)
         self.size = size
         self.ds = ds
         self.dt = dt
+
+        self.filename = 'spike_data/dataset/dvs_gestures_events_' + self.group_name + '_{}.hdf5'.format(self.n_class)
         if not os.path.isfile(self.filename):
             create_events_hdf5(self.filename, self.n_class, self.group_name)
+
         self.f = h5py.File(self.filename, 'r', swmr=True, libver="latest")
         self.n_subgroup = len(self.f)
         self.n_sample_ls = []
@@ -52,12 +54,12 @@ class DvsGestureDataset(torch.utils.data.Dataset):
             self.n_sample += sub_grp_len
         self.map = np.zeros(self.n_sample, dtype=int)
         self.n_sample_cnt = np.zeros(self.n_subgroup, dtype=int)
-        idx_beg = 0
+        i_begin = 0
         for sub_grp in range(self.n_subgroup):
             sub_grp_len = self.n_sample_ls[sub_grp]
-            idx_end = idx_beg + sub_grp_len
-            self.map[idx_beg:idx_end] = sub_grp
-            idx_beg += sub_grp_len
+            i_end = i_begin + sub_grp_len
+            self.map[i_begin: i_end] = sub_grp
+            i_begin += sub_grp_len
         for sub_grp in range(self.n_subgroup - 1):
             sub_grp_len = self.n_sample_ls[sub_grp]
             self.n_sample_cnt[sub_grp + 1] = self.n_sample_cnt[sub_grp] + sub_grp_len
@@ -70,36 +72,41 @@ class DvsGestureDataset(torch.utils.data.Dataset):
         sub_grp = self.f[str(sub_grp_index)]
         labels = sub_grp['labels'][()]
         label = labels[item_index, :]
-        tbegin = label[1]
-        tend = label[2] - 2 * self.n_step * self.dt
-        start_time = tbegin
-        if tbegin < tend:
-            start_time = np.random.randint(tbegin, tend)
+        t_begin = label[1]
+        t_end = label[2] - 2 * self.n_step * self.dt
+        start_time = t_begin
+        if (self.group_name == 'train') and (t_begin < t_end):
+            start_time = np.random.randint(t_begin, t_end)
         label = label[0] - 1
         times = sub_grp['time']
         datas = sub_grp['data']
-        idx_beg = find_first(times, start_time)
-        idx_end = find_first(times[idx_beg:], start_time + self.n_step * self.dt) + idx_beg
-        if idx_end <= idx_beg:
+        i_begin = bisect.bisect_left(times, start_time)
+        i_end = bisect.bisect_left(times[i_begin:], start_time + self.n_step * self.dt) + i_begin
+
+        if i_end <= i_begin:
             return self.__getitem__(index+1)
-        data = chunk_evs_pol(times[idx_beg:idx_end], datas[idx_beg:idx_end], dt=self.dt, n_step=self.n_step,
-                             size=self.size, ds=self.ds)
-        return torch.from_numpy(data).float(), torch.from_numpy(one_hot(label, 11)).float()
+
+        frames = events_to_frames(
+            times[i_begin: i_end],
+            datas[i_begin: i_end],
+            dt=self.dt,
+            ds=self.ds,
+            n_step=self.n_step,
+            size=self.size
+        )
+        return torch.from_numpy(frames).float(), torch.from_numpy(one_hot(label, self.n_class_total)).float()
 
     def __len__(self):
         return self.n_sample
 
 
-def gather_aedat(file_path, start_id, end_id, filename_prefix='user'):
-    if not os.path.isdir(file_path):
-        raise FileNotFoundError("dvs-gesture dataset not found, looked at: {}".format(file_path))
-    fns = []
+def gather_aedat(file_path, start_id, end_id):
+    files = []
     for i in range(start_id, end_id):
-        search_mask = file_path + '/' + filename_prefix + "{0:02d}".format(i) + '*.aedat'
-        files = glob.glob(search_mask)
-        if len(files) > 0:
-            fns += files
-    return fns
+        search_mask = file_path + '/user' + "{0:02d}".format(i) + '*.aedat'
+        file = glob.glob(search_mask)
+        files += file
+    return files
 
 
 def aedat_to_events(filename, label_range):
@@ -116,13 +123,8 @@ def aedat_to_events(filename, label_range):
                 break
 
             eventtype = struct.unpack('H', data_ev_head[0:2])[0]
-            # eventsource = struct.unpack('H', data_ev_head[2:4])[0]
             eventsize = struct.unpack('I', data_ev_head[4:8])[0]
-            # eventoffset = struct.unpack('I', data_ev_head[8:12])[0]
-            # eventtsoverflow = struct.unpack('I', data_ev_head[12:16])[0]
-            # eventcapacity = struct.unpack('I', data_ev_head[16:20])[0]
             eventnumber = struct.unpack('I', data_ev_head[20:24])[0]
-            # eventvalid = struct.unpack('I', data_ev_head[24:28])[0]
 
             if (eventtype == 1):
                 event_bytes = np.frombuffer(f.read(eventnumber * eventsize), 'uint32')
@@ -163,18 +165,18 @@ def compute_start_time(labels, pad):
 
 
 def create_events_hdf5(hdf5_filename, n_class, group_name):
-    fns = []
+    files = []
     if group_name == 'train':
-        fns = gather_aedat(os.path.join('./dataset/DvsGesture'), 1, 24)
+        files = gather_aedat(os.path.join('spike_data/dataset/DvsGesture'), 1, 24)
         print("generate dvs-gesture train dataset")
     elif group_name == 'test':
-        fns = gather_aedat(os.path.join('./dataset/DvsGesture'), 24, 30)
+        files = gather_aedat(os.path.join('spike_data/dataset/DvsGesture'), 24, 30)
         print("generate dvs-gesture test dataset")
     with h5py.File(hdf5_filename, 'w') as f:
         f.clear()
         key = 0
-        for file_name in fns:
-            events, labels = aedat_to_events(file_name, n_class)
+        for file in files:
+            events, labels = aedat_to_events(file, n_class)
             if len(events) > 0:
                 subgroup = f.create_group(str(key))
                 dataset_t = subgroup.create_dataset('time', events[:, 0].shape, dtype=np.uint32)
@@ -184,32 +186,6 @@ def create_events_hdf5(hdf5_filename, n_class, group_name):
                 dataset_d[...] = events[:, 1:]
                 dataset_l[...] = labels
                 key += 1
-
-
-def one_hot(mbt, num_classes):
-    out = np.zeros(num_classes)
-    out[mbt] = 1
-    return out
-
-
-def find_first(a, tgt):
-    return bisect.bisect_left(a, tgt)
-
-
-def chunk_evs_pol(times, datas, dt=1000, n_step=60, size=[2, 32, 32], ds=4):
-    t_start = times[0]
-    ts = range(t_start, t_start + n_step * dt, dt)
-    chunks = np.zeros(size + [len(ts)], dtype='int8')
-    idx_start = 0
-    idx_end = 0
-    for i, t in enumerate(ts):
-        idx_end += find_first(times[idx_end:], t + dt)
-        if idx_end > idx_start:
-            ee = datas[idx_start:idx_end]
-            pol, x, y = ee[:, 2], ee[:, 0] // ds, ee[:, 1] // ds
-            np.add.at(chunks, (pol, x, y, i), 1)
-        idx_start = idx_end
-    return chunks
 
 
 if __name__ == "__main__":

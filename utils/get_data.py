@@ -1,7 +1,7 @@
-from data_loader.dvsgesture_dataset import *
-from data_loader.nmnist_dataset import *
-from data_loader.caltech_dataset import *
-from data_loader.cifar_dataset import *
+from spike_data.dvsgesture_dataset import *
+from spike_data.nmnist_dataset import *
+from spike_data.caltech_dataset import *
+from spike_data.cifar_dataset import *
 
 def get_data(
         dataset_name,  # 数据集名称

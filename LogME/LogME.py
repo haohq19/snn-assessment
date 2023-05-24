@@ -132,15 +132,15 @@ class LogME(object):
             self.betas.append(beta)
             self.ts.append(alpha/beta)
 
-            self.sigma = sigma
-            self.lamb = sigma[0] / sigma[-1]
-            self.vareigen = np.std(sigma) ** 2
-            self.counts.append(count)
+            # self.sigma = sigma
+            # self.lamb = sigma[0] / sigma[-1]
+            # self.vareigen = np.std(sigma) ** 2
+            # self.counts.append(count)
             evidences.append(evidence / N)
-        t = 1 / N * sigma[0]
-        self.ts_avg = np.mean(self.ts)
-        prop = t / self.ts_avg
-        print(prop)
+        # t = 1 / N * sigma[0]
+        # self.ts_avg = np.mean(self.ts)
+        # prop = t / self.ts_avg
+        # print(prop)
 
         return np.mean(evidences)
 
