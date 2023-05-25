@@ -1,0 +1,110 @@
+criterion: !!set
+  MSELoss: null
+dataset:
+  fine-tune:
+    batch_size: 1
+    drop_last: true
+    ds: 4
+    dt: 1000
+    group_name: train
+    n_classes: 0
+    n_steps: 50
+    num_workers: 0
+    shuffle: true
+    type: dg
+  test:
+    batch_size: 1
+    drop_last: false
+    ds: 4
+    dt: 1000
+    group_name: test
+    n_classes: 0
+    n_steps: 50
+    num_workers: 0
+    shuffle: false
+    type: dg
+  train:
+    batch_size: 1
+    drop_last: true
+    ds: 4
+    dt: 1000
+    group_name: train
+    n_classes: 0
+    n_steps: 50
+    num_workers: 0
+    shuffle: true
+    type: dg
+device: cuda
+model:
+  backbone:
+    decay: 0.5
+    dropout_p: 0.5
+    layers:
+    - in_channels: 2
+      kernel_size: 3
+      out_channels: 64
+      padding: 1
+      stride: 1
+      type: conv2d
+    - kernel_size: 2
+      stride: 2
+      type: avgpool2d
+    - in_channels: 64
+      kernel_size: 3
+      out_channels: 128
+      padding: 1
+      stride: 1
+      type: conv2d
+    - kernel_size: 2
+      stride: 2
+      type: avgpool2d
+    - in_channels: 128
+      kernel_size: 3
+      out_channels: 128
+      padding: 1
+      stride: 1
+      type: conv2d
+    - in_channels: 128
+      kernel_size: 3
+      out_channels: 128
+      padding: 1
+      stride: 1
+      type: conv2d
+    - in_channels: 128
+      kernel_size: 3
+      out_channels: 128
+      padding: 1
+      residual: -2
+      stride: 1
+      type: conv2d
+    - kernel_size: 2
+      stride: 2
+      type: avgpool2d
+    - in_channels: 128
+      kernel_size: 3
+      out_channels: 128
+      padding: 1
+      stride: 1
+      type: conv2d
+    - kernel_size: 4
+      stride: 4
+      type: avgpool2d
+  head:
+    decay: 0.5
+    dropout_p: 0.5
+    layers:
+    - in_features: 256
+      out_features: 11
+      type: fc
+optimizer:
+  learning_rate: 0.0001
+save:
+  epoch: ''
+  file_name: ''
+  path: ''
+  time: ''
+schedular:
+  decay: 0.3
+  lr_decay_epoch: 100
+train:
+  n_epochs: 300

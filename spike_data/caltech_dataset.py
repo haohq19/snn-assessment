@@ -5,6 +5,9 @@ from spike_data.utils import *
 
 
 class CaltechDataset(torch.utils.data.Dataset):
+
+    num_instances = 100
+
     def __init__(
             self,
             n_step=10,
@@ -17,9 +20,8 @@ class CaltechDataset(torch.utils.data.Dataset):
         if size is None:
             size = [2, 32, 32]
         self.n_step = n_step
-        self.n_class_total = 100
         if n_class == 0:
-            self.n_class = self.n_class_total
+            self.n_class = CaltechDataset.num_instances
         else:
             self.n_class = n_class
         self.group_name = group_name
@@ -58,6 +60,10 @@ class CaltechDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return self.n_sample
+
+    @classmethod
+    def get_instances_num(cls):
+        return CaltechDataset.num_instances
 
 
 def bin_to_events(key, folder_name, group_name):

@@ -2,8 +2,8 @@ import argparse
 import os
 import re
 import numpy as np
-from utils.get_data import *
-from utils.get_model import *
+from tools.get_data import *
+from tools.get_model import *
 from LogME.LogME import *
 from APriorLogEvidence.aple import *
 

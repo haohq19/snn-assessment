@@ -9,6 +9,9 @@ import torch.utils.data
 
 
 class DvsGestureDataset(torch.utils.data.Dataset):
+
+    num_instances = 11
+
     def __init__(
             self,
             n_step=10,
@@ -30,9 +33,8 @@ class DvsGestureDataset(torch.utils.data.Dataset):
         if size is None:
             size = [2, 32, 32]
         self.n_step = n_step
-        self.n_class_total = 11  # there are 11 classes in DvsGestureDataset
         if n_class == 0:
-            self.n_class = self.n_class_total
+            self.n_class = DvsGestureDataset.num_instances
         else:
             self.n_class = n_class
         self.group_name = group_name
@@ -98,6 +100,10 @@ class DvsGestureDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return self.n_sample
+
+    @classmethod
+    def get_instances_num(cls):
+        return DvsGestureDataset.num_instances
 
 
 def gather_aedat(file_path, start_id, end_id):

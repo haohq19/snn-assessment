@@ -7,11 +7,13 @@ import numpy as np
 
 
 class NMnistDataset(data.Dataset):
+
+    num_instances = 10
+
     def __init__(self, group_name, n_class=10, n_step=10):
         super(NMnistDataset, self).__init__()
-        self.n_class_total = 10
         if n_class == 0:
-            self.n_class = self.n_class_total
+            self.n_class = NMnistDataset.num_instances
         else:
             self.n_class = n_class
         if group_name == 'test':
@@ -48,6 +50,10 @@ class NMnistDataset(data.Dataset):
 
     def __len__(self):
         return self.n_sample
+
+    @classmethod
+    def get_instances_num(cls):
+        return NMnistDataset.num_instances
 
 
 if __name__ == '__main__':

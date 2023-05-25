@@ -1,17 +1,23 @@
 import argparse
-from utils.get_data import *
-from utils.get_model import *
-from utils.optimizer import *
+from tools.get_data import *
+from tools.get_model import get_model
+from tools.optimizer import *
+from tools.get_timestamp import *
 from models.criterion import *
+from config.config import *
 
 parser = argparse.ArgumentParser(description='train model')
 parser.add_argument('--gpu', help='Number of GPU to use', default=0, type=int)
-parser.add_argument('--dt', help='Duration of one time slice (ms)', default=10, type=int)
-parser.add_argument('--lr', help='Learning rate', default=4, type=int)
-parser.add_argument('--cls', help='Number of classes', default=11, type=int)
-parser.add_argument('--ld', help='Mode, 0: init params, 1: load params', default=0, type=int)
-parser.add_argument('--ft', help='Train, 0: train, 1: fine-tune', default=0, type=int)
-parser.add_argument('--num', help='Number', default=11, type=int)
+parser.add_argument('--dt', help='Temporal resolution of one frame (ms)', default=10, type=int)
+parser.add_argument('--ds', help='Spatial resolution of one frame (pixel)', default=4, type=int)
+parser.add_argument('--learning_rate', help='Learning rate', default=4, type=int)
+parser.add_argument('--tr_ds', help='Name of the train dataset', default='', type=str)
+parser.add_argument('--ts_ds', help='Name of the test dataset', default='', type=str)
+parser.add_argument('--ft_ds', help='Name of the fine-tune dataset', default='', type=str)
+parser.add_argument('--num_instances', help='Number of instances in the dataset', default=11, type=int)
+parser.add_argument('--ld_backbone', help='if load backbone weights', default=0, type=int)
+parser.add_argument('--ld_head', help='if load head weights', default=0, type=int)
+parser.add_argument('--mode', help='run mode, 0: train, 1: fine-tune', default=0, type=int)
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
@@ -32,27 +38,7 @@ def train(model,  # 模型
           device,
           ft_dataset_name=''
           ):
-    """
 
-    Args:
-        model: model
-        criterion:
-        scheduler:
-        train_loader:
-        test_loader:
-        train_loss_record:
-        test_loss_record:
-        train_acc_record:
-        acc_record:
-        epoch:
-        n_epoch:
-        weight_name:
-        device:
-        ft_dataset_name:
-
-    Returns:
-
-    """
     model.to(device)
     start_time = time.time()
     weight_save_path = './models_save/' + weight_name + '/'
@@ -126,22 +112,13 @@ def train(model,  # 模型
             torch.save(state, weight_save_path + weight_name + '_{}.pth'.format(epoch))
 
 
-threshs = [0.1, 0.5]
-lenses = [0.3, 0.7]
-decays = [0.3, 0.7]
-
-i = args.num - 1
-
-thresh = threshs[int(i/4) % 2]
-lens = lenses[int(i/2) % 2]
-decay = decays[int(i/1) % 2]
-
 if __name__ == '__main__':
-    n = args.num
-    date = '0509'
-    number = date + ('%.2d' % n)
-    print(number)
-    dataset_name = 'dg'
+    config = Config()
+    timestamp = get_timestamp()
+    print(timestamp)
+    train_dataset_name = args.tr_ds
+    test_dataset_name = args.ts_ds
+    finetune_dataset_name = args.ft_ds
 
     # dg: dvs-gesture
     # nm: n-mnist
@@ -153,10 +130,12 @@ if __name__ == '__main__':
     # sres: 4, 5, 6, 7, 18
     # scnn: 0, 1, 2, 3, 4
 
+
     n_step = 100
     dt = args.dt * 1000  # temporal resolution, in us
 
-    weight_name = '{}_{}_{}_{}c'.format(number, dataset_name, model_name, args.cls)
+
+    weight_name = '{}_{}_{}_{}c'.format(timestamp, model_name, dataset_name, args.cls)
     classifier_name = 'rc'
     batch_size = 40
     ds = 4  # spatial resolution
@@ -168,32 +147,12 @@ if __name__ == '__main__':
     # print(device)
     if args.ft == 0:
         print('train: train models')
-        train_loader, n_class_total = get_data(dataset_name=dataset_name,
-                                               group_name='train',
-                                               n_step=n_step,
-                                               n_class=args.cls,
-                                               ds=ds,
-                                               dt=dt,
-                                               batch_size=batch_size,
-                                               num_workers=num_workers)
+        train_loader = get_data(config=config.config['train'])
+        n_instances_total = get_instances_num(config.config['train'])
+        test_loader = get_data(config=config.config['test'])
 
-        test_loader, _ = get_data(dataset_name=dataset_name,
-                                  group_name='test',
-                                  n_step=n_step,
-                                  n_class=n_class_total,
-                                  ds=ds,
-                                  dt=dt,
-                                  batch_size=batch_size,
-                                  num_workers=num_workers)
-
-        model, train_loss_record, test_loss_record, train_acc_record, acc_record, epoch = get_model(device=device,
-                                                                                                    n_class_target=n_class_total,
-                                                                                                    model_name=model_name,
-                                                                                                    weight_name=weight_name,
-                                                                                                    load_param=args.ld,
-                                                                                                    classifier_name=classifier_name
-                                                                                                    )
-
+        model = get_model(config=config.config['model'], device=device)                                                                                                    )
+        train_loss_record, test_loss_record, train_acc_record, acc_record, epoch = 0
 
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         scheduler = Scheduler(optimizer, learning_rate)

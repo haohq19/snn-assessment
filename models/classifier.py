@@ -78,11 +78,4 @@ class LinearClassifier(nn.Module):
         return output/n_step
 
 
-def get_classifier(classifier_name, n_dim, n_class, device):
 
-    if classifier_name == 'rc':
-        return RateCodingClassifier(n_dim, n_class, device)
-    elif classifier_name == 'tc':
-        return TemporalCodingClassifier(n_dim, n_class, device)
-    elif classifier_name == 'lc':
-        return LinearClassifier(n_dim, n_class, device)
