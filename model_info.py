@@ -5,6 +5,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='model information')
 parser.add_argument('--num', help='Number of model', default=0, type=str)
+parser.add_argument('--ft', help='Name of fine-tune dataset', default='', type=str)
 args = parser.parse_args()
 
 folder_path = './models_save'
@@ -16,7 +17,7 @@ for file_name in file_list:
     if os.path.isdir(os.path.join(folder_path, file_name)):
         model_save_path = os.path.join(folder_path, file_name)
         pt_files = glob.glob(os.path.join(model_save_path, date + '*.pth'))
-        ft_files = glob.glob(os.path.join(model_save_path, date + '*ft*.pth'))
+        ft_files = glob.glob(os.path.join(model_save_path, date + '*ft*{}*.pth'.format(args.ft)))
         pt_files = list(set(pt_files).difference(set(ft_files)))
         if len(pt_files) > 0:
             i += 1

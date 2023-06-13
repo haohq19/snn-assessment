@@ -1,10 +1,9 @@
 from models.sresnet import *
-from models.scnn import *
-from snn_evaluate import Model
+from files.snn_evaluate import Model
 from fvcore.nn import *
 
 import torch
-import torch.nn as nn
+
 
 #  统计模型参数数量、计算量
 def parm_statics(

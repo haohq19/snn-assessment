@@ -2,10 +2,10 @@ import argparse
 import os
 import re
 import numpy as np
-from utils.get_data import *
-from utils.get_model import *
-from utils.optimizer import *
+from tools.get_data import *
+from tools.get_model import *
 from LogME.LogME import *
+from APriorLogEvidence.aple import *
 
 parser = argparse.ArgumentParser(description='snn assessment')
 parser.add_argument('--gpu', help='Number of GPU to use', default=7, type=int)
@@ -13,23 +13,14 @@ parser.add_argument('--ld', help='Mode, 0: init params, 1: load params', default
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
-
-
-
-
-
-
-
-
 def assess(model, test_loader):
     model.to(device)
     model.eval()
     features = []
     labels = []
     for _, (input, label) in enumerate(test_loader):
-        batch_size = input.shape[0]
-        n_step = input.shape[4]
-
+        # batch_size = input.shape[0]
+        # n_step = input.shape[4]
         # weight
         # weight = np.zeros([batch_size, 1, n_step], dtype=float)
         # norm
@@ -39,13 +30,10 @@ def assess(model, test_loader):
         #     weight[..., i] = (1 - 0.2 ** (n_step - i)) / (1 - 0.2)
         # for i in range(batch_size):
         #     norm[i] = np.linalg.norm(image[i])
-        # label
         label = np.argmax(label.numpy(), axis=1)
-        # feature
         feature = model(input.to(device)).detach().cpu().numpy()
         # for i in range(len(feature)):
         #     sample = feature[i]
-        #
         #     fig = plt.figure(dpi=300)
         #     ax = fig.add_subplot(111)
         #     im = ax.imshow(sample, cmap='jet', aspect='auto')
@@ -53,22 +41,23 @@ def assess(model, test_loader):
         #     ax.set_aspect(1)
         #     plt.show()
         # softmax
-        exp_f = np.exp(feature)
-        softmax_f = exp_f / np.sum(np.sum(exp_f, axis=1, keepdims=True), axis=2, keepdims=True)
-        feature = softmax_f.sum(axis=2)
+        # exp_f = np.exp(feature)
+        # softmax_f = exp_f / np.sum(np.sum(exp_f, axis=1, keepdims=True), axis=2, keepdims=True)
+        # feature = softmax_f.sum(axis=2)
         # for i in range(batch_size):
         #     fnorm[i] = np.linalg.norm(feature[i])
         # feature = feature / fnorm
         # feature = feature / norm
-        # feature = feature.sum(axis=2) / n_step
+        feature = feature.sum(axis=2)
+        # feature = feature / np.sqrt(np.sum(feature * feature, axis=1, keepdims=True))
         features.append(feature)
         labels.append(label)
 
     features = np.vstack(features)
     labels = np.hstack(labels)
     logme = LogME()
-    return logme.fit(features, labels)
-
+    # return logme.fit(features, labels)
+    return aple(features, labels)
 
 def sign(x, y):
     if x >= y:
@@ -90,19 +79,19 @@ def kendall_relative_coefficient(x, y=None):
 
 if __name__ == '__main__':
     print('assess: assess models')
-    number = '042602'
-    model_name = 'sres4'
+    number = '040801'
+    model_name = 'sres5'
     train_ds_name = 'dg'
     test_ds_name = 'dg'
 
-    n_step = 100
-    batch_size = 8
+    n_step = 50
+    batch_size = 1
 
-    dt = 10 * 1000  # temporal resolution, in us
+    dt = 20 * 1000  # temporal resolution, in us
     ds = 4  # spatial resolution
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    num_workers = 16
+    num_workers = 0 # 16
 
 
     folder_path = './models_save'
